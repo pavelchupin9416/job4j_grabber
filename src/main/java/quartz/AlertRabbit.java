@@ -5,10 +5,7 @@ import org.quartz.impl.StdSchedulerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.Properties;
 
@@ -20,17 +17,27 @@ import static org.quartz.SimpleScheduleBuilder.*;
 public class AlertRabbit {
 
     public static void main(String[] args) {
+       int interval;
         try {
             Connection cn;
-            InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties");
+            try (InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
             Properties config = new Properties();
             config.load(in);
+            interval = Integer.parseInt(config.getProperty("rabbit.interval"));
+
             Class.forName(config.getProperty("driver"));
-            cn = DriverManager.getConnection(
-                    config.getProperty("url"),
-                    config.getProperty("username"),
-                    config.getProperty("password")
-            );
+            try {
+                cn = DriverManager.getConnection(
+                        config.getProperty("url"),
+                        config.getProperty("username"),
+                        config.getProperty("password")
+                );
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
             Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
             scheduler.start();
             JobDataMap data = new JobDataMap();
@@ -39,7 +46,7 @@ public class AlertRabbit {
                     .usingJobData(data)
                     .build();
             SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(5)
+                    .withIntervalInSeconds(interval)
                     .repeatForever();
             Trigger trigger = newTrigger()
                     .startNow()
@@ -65,6 +72,7 @@ public class AlertRabbit {
         }
         return period;
     }
+
 
     public static class Rabbit implements Job {
         @Override
