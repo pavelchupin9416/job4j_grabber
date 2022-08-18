@@ -18,44 +18,35 @@ public class AlertRabbit {
 
     public static void main(String[] args) {
        int interval;
-        try {
-            Connection cn;
             try (InputStream in = AlertRabbit.class.getClassLoader().getResourceAsStream("rabbit.properties")) {
             Properties config = new Properties();
             config.load(in);
             interval = Integer.parseInt(config.getProperty("rabbit.interval"));
-
             Class.forName(config.getProperty("driver"));
-            try {
-                cn = DriverManager.getConnection(
+            try (
+                    Connection cn = DriverManager.getConnection(
                         config.getProperty("url"),
                         config.getProperty("username"),
                         config.getProperty("password")
-                );
-            } catch (SQLException e) {
-                throw new RuntimeException(e);
+                )) {
+                Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
+                scheduler.start();
+                JobDataMap data = new JobDataMap();
+                data.put("connect", cn);
+                JobDetail job = newJob(Rabbit.class)
+                        .usingJobData(data)
+                        .build();
+                SimpleScheduleBuilder times = simpleSchedule()
+                        .withIntervalInSeconds(interval)
+                        .repeatForever();
+                Trigger trigger = newTrigger()
+                        .startNow()
+                        .withSchedule(times)
+                        .build();
+                scheduler.scheduleJob(job, trigger);
+                Thread.sleep(10000);
+                scheduler.shutdown();
             }
-            } catch (Exception e) {
-                throw new IllegalStateException(e);
-            }
-            Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();
-            scheduler.start();
-            JobDataMap data = new JobDataMap();
-            data.put("connect", cn);
-            JobDetail job = newJob(Rabbit.class)
-                    .usingJobData(data)
-                    .build();
-            SimpleScheduleBuilder times = simpleSchedule()
-                    .withIntervalInSeconds(interval)
-                    .repeatForever();
-            Trigger trigger = newTrigger()
-                    .startNow()
-                    .withSchedule(times)
-                    .build();
-            scheduler.scheduleJob(job, trigger);
-            Thread.sleep(10000);
-            cn.close();
-            scheduler.shutdown();
         } catch (Exception se) {
             se.printStackTrace();
         }
