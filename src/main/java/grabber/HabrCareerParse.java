@@ -1,11 +1,13 @@
 package grabber;
 
+import grabber.utils.HabrCareerDateTimeParser;
 import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 
 public class HabrCareerParse {
@@ -23,7 +25,8 @@ public class HabrCareerParse {
             Element linkElement = titleElement.child(0);
             Element dateElement = row.select(".vacancy-card__date").first();
             Element datelinkElement = dateElement.child(0);
-            String date = datelinkElement.attr("datetime");
+            HabrCareerDateTimeParser datePars = new HabrCareerDateTimeParser();
+            LocalDateTime date = datePars.parse(datelinkElement.attr("datetime"));
             String vacancyName = titleElement.text();
             String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
             System.out.printf("%s %s %s%n", vacancyName, link, date);
