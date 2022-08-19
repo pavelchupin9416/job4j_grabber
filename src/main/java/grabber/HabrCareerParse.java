@@ -16,10 +16,10 @@ public class HabrCareerParse {
     private static final String SOURCE_LINK = "https://career.habr.com";
 
     private static final String PAGE_LINK = String.format("%s/vacancies/java_developer?page=", SOURCE_LINK);
+    private static final int PAGES = 5;
 
     public static void main(String[] args) throws IOException {
-        int index = 1;
-        while (index <= 5) {
+        for (int index = 1; index <= PAGES; index++) {
             System.out.println("Страница " + index);
             Connection connection = Jsoup.connect(PAGE_LINK + index);
             Document document = connection.get();
@@ -35,7 +35,6 @@ public class HabrCareerParse {
                 String link = String.format("%s%s", SOURCE_LINK, linkElement.attr("href"));
                 System.out.printf("%s %s %s%n", vacancyName, link, date);
             });
-            index++;
         }
     }
 }
