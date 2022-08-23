@@ -36,13 +36,13 @@ public class PsqlStore implements Store, AutoCloseable {
     @Override
     public void save(Post post) {
         try (PreparedStatement statement
-                     = cn.prepareStatement("insert into post(name, link, text, created) values (?, ?, ?, ?)")) {
+                     = cn.prepareStatement("insert into post(name, link, text, created) values (?, ?, ?, ?) on conflict (link) do nothing")) {
             statement.setString(1, post.getTitle());
             statement.setString(2, post.getLink());
             statement.setString(3, post.getDescription());
             statement.setTimestamp(4, Timestamp.valueOf(post.getCreated()));
             statement.execute();
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
@@ -58,7 +58,7 @@ public class PsqlStore implements Store, AutoCloseable {
                     posts.add(resultPost(resultSet));
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException  e) {
             e.printStackTrace();
         }
         return posts;
@@ -76,7 +76,7 @@ public class PsqlStore implements Store, AutoCloseable {
                     post = resultPost(resultSet);
                 }
             }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         return post;
@@ -97,7 +97,7 @@ public class PsqlStore implements Store, AutoCloseable {
         } catch (Exception e) {
             e.fillInStackTrace();
         }
-        PsqlStore psqlStore = new PsqlStore(config);
+        try (PsqlStore psqlStore = new PsqlStore(config)) {
         HabrCareerParse habrCareerParse = new HabrCareerParse(new HabrCareerDateTimeParser());
         List<Post> posts = habrCareerParse.list("https://career.habr.com/vacancies/java_developer?page=");
         for (Post post : posts) {
@@ -105,5 +105,8 @@ public class PsqlStore implements Store, AutoCloseable {
         }
         psqlStore.getAll().forEach(System.out::println);
         System.out.println(psqlStore.findById(1));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
